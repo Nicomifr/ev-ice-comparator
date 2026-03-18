@@ -1,0 +1,994 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EV vs ICE — Lifecycle Cost Comparator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg: #0d0f12;
+  --bg2: #13161b;
+  --bg3: #1a1e25;
+  --bg4: #21262f;
+  --border: rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.13);
+  --text: #f0f2f5;
+  --text2: #8a9ab0;
+  --text3: #4e5e72;
+  --ev: #00e5a0;
+  --ev2: #00b87e;
+  --ev-bg: rgba(0,229,160,0.08);
+  --ev-border: rgba(0,229,160,0.25);
+  --ice: #ff6b35;
+  --ice2: #cc4f1f;
+  --ice-bg: rgba(255,107,53,0.08);
+  --ice-border: rgba(255,107,53,0.25);
+  --accent: #4f8ef7;
+  --radius: 12px;
+  --radius-sm: 8px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+/* HEADER */
+.site-header {
+  border-bottom: 1px solid var(--border);
+  padding: 0 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 60px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(13,15,18,0.92);
+  backdrop-filter: blur(12px);
+}
+.logo {
+  font-family: 'Syne', sans-serif;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.logo-ev { color: var(--ev); }
+.logo-sep { color: var(--text3); font-weight: 400; margin: 0 2px; }
+.logo-ice { color: var(--ice); }
+.logo-sub { color: var(--text3); font-weight: 400; font-size: 13px; font-family: 'DM Sans', sans-serif; }
+.header-note { font-size: 12px; color: var(--text3); }
+
+/* LAYOUT */
+.container { max-width: 1200px; margin: 0 auto; padding: 2rem; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+.grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
+@media (max-width: 900px) { .grid-2 { grid-template-columns: 1fr; } .grid-4 { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 500px) { .grid-4 { grid-template-columns: 1fr 1fr; } .container { padding: 1rem; } }
+
+/* SECTION LABELS */
+.section-label {
+  font-family: 'Syne', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text3);
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.section-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+/* CARDS */
+.card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  transition: border-color 0.2s;
+}
+.card:hover { border-color: var(--border2); }
+
+/* SLIDERS PANEL */
+.settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem 2rem; }
+@media (max-width: 700px) { .settings-grid { grid-template-columns: 1fr; } }
+.slider-item label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  color: var(--text2);
+  margin-bottom: 8px;
+}
+.slider-item label span {
+  font-family: 'Syne', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.02em;
+}
+input[type=range] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  background: var(--bg4);
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px; height: 18px;
+  background: var(--accent);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: transform 0.15s, background 0.15s;
+}
+input[type=range]:hover::-webkit-slider-thumb { transform: scale(1.2); background: #7aaeff; }
+
+/* SELECT */
+select {
+  width: 100%;
+  background: var(--bg3);
+  color: var(--text);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-sm);
+  padding: 9px 12px;
+  font-size: 13px;
+  font-family: 'DM Sans', sans-serif;
+  cursor: pointer;
+  outline: none;
+  margin-bottom: 8px;
+  transition: border-color 0.2s;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%234e5e72' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 32px;
+}
+select:focus { border-color: var(--accent); }
+select option { background: #1a1e25; }
+
+/* REGION PILLS */
+.region-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 1rem; }
+.pill {
+  padding: 4px 12px;
+  font-size: 12px;
+  border: 1px solid var(--border2);
+  border-radius: 20px;
+  cursor: pointer;
+  color: var(--text3);
+  transition: all 0.15s;
+  font-family: 'DM Sans', sans-serif;
+  background: transparent;
+}
+.pill:hover { border-color: var(--border2); color: var(--text2); }
+.pill.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+/* PICKER PANELS */
+.picker-panels { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+@media (max-width: 600px) { .picker-panels { grid-template-columns: 1fr; } }
+.picker {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  transition: border-color 0.3s;
+}
+.picker.ev-selected { border-color: var(--ev-border); background: linear-gradient(145deg, var(--ev-bg), var(--bg3)); }
+.picker.ice-selected { border-color: var(--ice-border); background: linear-gradient(145deg, var(--ice-bg), var(--bg3)); }
+.picker-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 1rem;
+}
+.picker-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+}
+.picker-dot.ev { background: var(--ev); }
+.picker-dot.ice { background: var(--ice); }
+.picker-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.picker-title.ev { color: var(--ev); }
+.picker-title.ice { color: var(--ice); }
+.car-info-box {
+  margin-top: 8px;
+  padding: 10px 12px;
+  background: var(--bg4);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  color: var(--text2);
+  min-height: 42px;
+  line-height: 1.5;
+  border: 1px solid var(--border);
+}
+.car-info-box .car-name {
+  font-family: 'Syne', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 2px;
+}
+.car-info-box .car-stats { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.car-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--text3);
+}
+.car-stat strong { color: var(--text2); font-weight: 500; }
+
+/* WINNER BANNER */
+.winner-banner {
+  border-radius: var(--radius);
+  padding: 14px 20px;
+  margin-bottom: 1.5rem;
+  font-family: 'Syne', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  letter-spacing: -0.01em;
+}
+.winner-banner.ev { background: var(--ev-bg); border: 1px solid var(--ev-border); color: var(--ev); }
+.winner-banner.ice { background: var(--ice-bg); border: 1px solid var(--ice-border); color: var(--ice); }
+.winner-banner.tie { background: var(--bg3); border: 1px solid var(--border); color: var(--text2); }
+.winner-banner .savings-pill {
+  font-size: 12px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-weight: 700;
+}
+.winner-banner.ev .savings-pill { background: rgba(0,229,160,0.15); }
+.winner-banner.ice .savings-pill { background: rgba(255,107,53,0.15); }
+
+/* METRIC CARDS */
+.metric-card {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  text-align: center;
+}
+.metric-card .mlabel {
+  font-size: 11px;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 6px;
+  font-family: 'Syne', sans-serif;
+}
+.metric-card .mval {
+  font-family: 'Syne', sans-serif;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  color: var(--text);
+}
+.metric-card .mval.ev { color: var(--ev); }
+.metric-card .mval.ice { color: var(--ice); }
+.metric-card .msub { font-size: 11px; color: var(--text3); margin-top: 3px; }
+
+/* BREAKDOWN TABLE */
+.breakdown-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.breakdown-table th {
+  text-align: left;
+  padding: 8px 12px;
+  font-size: 11px;
+  font-family: 'Syne', sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text3);
+  border-bottom: 1px solid var(--border);
+}
+.breakdown-table td { padding: 9px 12px; border-bottom: 1px solid var(--border); color: var(--text2); }
+.breakdown-table tr:last-child td { border-bottom: none; font-weight: 500; color: var(--text); }
+.breakdown-table td.ev { color: var(--ev); font-weight: 500; }
+.breakdown-table td.ice { color: var(--ice); font-weight: 500; }
+.breakdown-table td.diff-pos { color: #ff6b6b; font-size: 12px; }
+.breakdown-table td.diff-neg { color: var(--ev); font-size: 12px; }
+.breakdown-table td.diff-neu { color: var(--text3); font-size: 12px; }
+.breakdown-table tbody tr:hover { background: var(--bg4); }
+
+/* CHART TABS */
+.chart-tabs { display: flex; gap: 4px; margin-bottom: 1.25rem; }
+.chart-tab {
+  padding: 6px 14px;
+  font-size: 12px;
+  font-family: 'Syne', sans-serif;
+  font-weight: 700;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--text3);
+  background: transparent;
+  transition: all 0.15s;
+  letter-spacing: 0.02em;
+}
+.chart-tab:hover { color: var(--text2); border-color: var(--border2); }
+.chart-tab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+/* LEGEND */
+.chart-legend { display: flex; gap: 16px; margin-bottom: 10px; flex-wrap: wrap; }
+.legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text2); }
+.legend-swatch { width: 10px; height: 10px; border-radius: 2px; }
+
+/* CHART WRAPPER */
+.chart-wrap { position: relative; width: 100%; height: 260px; }
+.chart-panel { display: none; }
+.chart-panel.active { display: block; }
+
+/* COUNTRY SELECTOR */
+.country-row { display: flex; gap: 12px; align-items: center; margin-bottom: 1.5rem; }
+.country-row select { margin-bottom: 0; flex: 1; }
+.country-label { font-size: 13px; color: var(--text2); white-space: nowrap; }
+
+/* FOOTNOTE */
+.footnote {
+  font-size: 11px;
+  color: var(--text3);
+  line-height: 1.6;
+  padding: 1rem 0 0;
+  border-top: 1px solid var(--border);
+  margin-top: 1.5rem;
+}
+
+/* EMPTY STATE */
+.empty-state {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--text3);
+}
+.empty-state .icon {
+  font-size: 40px;
+  margin-bottom: 1rem;
+  opacity: 0.4;
+}
+.empty-state p { font-size: 14px; }
+
+/* PAGE SECTIONS SPACING */
+.page-section { margin-bottom: 2rem; }
+
+/* TYPE TAG */
+.type-tag {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  font-family: 'Syne', sans-serif;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.type-tag.ev { background: var(--ev-bg); color: var(--ev); border: 1px solid var(--ev-border); }
+.type-tag.ice { background: var(--ice-bg); color: var(--ice); border: 1px solid var(--ice-border); }
+
+/* SCROLL FADE IN */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.fade-up { animation: fadeUp 0.45s ease both; }
+.fade-up-2 { animation: fadeUp 0.45s 0.1s ease both; }
+.fade-up-3 { animation: fadeUp 0.45s 0.2s ease both; }
+
+/* FOOTER */
+footer {
+  border-top: 1px solid var(--border);
+  padding: 1.5rem 2rem;
+  text-align: center;
+  font-size: 12px;
+  color: var(--text3);
+  margin-top: 3rem;
+}
+footer a { color: var(--text3); text-decoration: underline; }
+
+/* SHARE / EXPORT BTN */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-family: 'Syne', sans-serif;
+  font-weight: 700;
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  background: transparent;
+  color: var(--text2);
+  transition: all 0.15s;
+  letter-spacing: 0.02em;
+}
+.btn:hover { background: var(--bg3); color: var(--text); border-color: var(--border2); }
+.btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn-primary:hover { background: #7aaeff; border-color: #7aaeff; color: #fff; }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="logo">
+    <span class="logo-ev">EV</span>
+    <span class="logo-sep">vs</span>
+    <span class="logo-ice">ICE</span>
+    <span class="logo-sub">&nbsp;Lifecycle Comparator</span>
+  </div>
+  <span class="header-note">130+ models · 50+ countries</span>
+</header>
+
+<div class="container">
+
+  <!-- STEP 1: COUNTRY + SLIDERS -->
+  <div class="page-section fade-up">
+    <div class="section-label">1 — Location &amp; assumptions</div>
+    <div class="card">
+      <div class="country-row">
+        <span class="country-label">Country</span>
+        <select id="countrySelect" onchange="onCountry()"></select>
+      </div>
+      <div class="settings-grid">
+        <div class="slider-item">
+          <label>Electricity price <span id="elecV">$0.17 /kWh</span></label>
+          <input type="range" id="elecS" min="0.03" max="0.55" step="0.01" value="0.17" oninput="onSlider()">
+        </div>
+        <div class="slider-item">
+          <label>Gasoline price <span id="fuelV">$1.40 /L</span></label>
+          <input type="range" id="fuelS" min="0.30" max="3.20" step="0.05" value="1.40" oninput="onSlider()">
+        </div>
+        <div class="slider-item">
+          <label>Distance per year <span id="distV">15,000 km</span></label>
+          <input type="range" id="distS" min="5000" max="60000" step="1000" value="15000" oninput="onSlider()">
+        </div>
+        <div class="slider-item">
+          <label>Ownership period <span id="yearsV">8 years</span></label>
+          <input type="range" id="yearsS" min="3" max="15" step="1" value="8" oninput="onSlider()">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2: CAR PICKERS -->
+  <div class="page-section fade-up-2">
+    <div class="section-label">2 — Select one EV and one ICE vehicle</div>
+    <div class="card">
+      <div class="region-pills" id="regionPills"></div>
+      <div class="picker-panels">
+        <!-- EV PICKER -->
+        <div class="picker" id="evPicker">
+          <div class="picker-header">
+            <div class="picker-dot ev"></div>
+            <span class="picker-title ev">EV — Electric vehicle</span>
+          </div>
+          <select id="evBrand" onchange="populateModels('ev')"></select>
+          <select id="evSeg" onchange="populateModels('ev')"></select>
+          <select id="evModel" onchange="onModelChange('ev')"></select>
+          <div class="car-info-box" id="evInfo">
+            <div style="color:var(--text3);font-size:12px;">Select a brand and model above</div>
+          </div>
+        </div>
+        <!-- ICE PICKER -->
+        <div class="picker" id="icePicker">
+          <div class="picker-header">
+            <div class="picker-dot ice"></div>
+            <span class="picker-title ice">ICE — Internal combustion</span>
+          </div>
+          <select id="iceBrand" onchange="populateModels('ice')"></select>
+          <select id="iceSeg" onchange="populateModels('ice')"></select>
+          <select id="iceModel" onchange="onModelChange('ice')"></select>
+          <div class="car-info-box" id="iceInfo">
+            <div style="color:var(--text3);font-size:12px;">Select a brand and model above</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 3: RESULTS -->
+  <div id="resultsSection" style="display:none">
+    <div class="page-section fade-up-3">
+      <div class="section-label">3 — Lifecycle cost results</div>
+
+      <div id="winnerBanner" class="winner-banner" style="margin-bottom:1.5rem"></div>
+
+      <div class="grid-4" style="margin-bottom:1.5rem">
+        <div class="metric-card"><div class="mlabel">EV total cost</div><div class="mval ev" id="mEvTco">—</div><div class="msub" id="mEvPy">—</div></div>
+        <div class="metric-card"><div class="mlabel">ICE total cost</div><div class="mval ice" id="mIceTco">—</div><div class="msub" id="mIcePy">—</div></div>
+        <div class="metric-card"><div class="mlabel">Break-even</div><div class="mval" id="mBe">—</div><div class="msub">years to recover premium</div></div>
+        <div class="metric-card"><div class="mlabel">Net savings</div><div class="mval" id="mSave">—</div><div class="msub">EV vs ICE over period</div></div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="section-label" style="margin-bottom:1rem">Cost breakdown</div>
+          <table class="breakdown-table">
+            <thead><tr><th>Category</th><th>EV</th><th>ICE</th><th>EV − ICE</th></tr></thead>
+            <tbody>
+              <tr><td>Purchase (MSRP)</td><td class="ev" id="r1a">—</td><td class="ice" id="r1b">—</td><td id="r1d">—</td></tr>
+              <tr><td>Energy cost</td><td class="ev" id="r2a">—</td><td class="ice" id="r2b">—</td><td id="r2d">—</td></tr>
+              <tr><td>Maintenance</td><td class="ev" id="r3a">—</td><td class="ice" id="r3b">—</td><td id="r3d">—</td></tr>
+              <tr><td>Insurance (est.)</td><td class="ev" id="r4a">—</td><td class="ice" id="r4b">—</td><td id="r4d">—</td></tr>
+              <tr><td>Residual value</td><td class="ev" id="r5a">—</td><td class="ice" id="r5b">—</td><td id="r5d">—</td></tr>
+              <tr><td>Total (TCO)</td><td class="ev" id="r6a">—</td><td class="ice" id="r6b">—</td><td id="r6d">—</td></tr>
+            </tbody>
+          </table>
+          <div class="footnote">
+            MSRP: manufacturer data &amp; global market equivalents. Maintenance: US DoE benchmarks (EV $0.061/km, ICE $0.101/km). Insurance: MSRP × 2.2%/yr; EV carries +25% industry premium. Residual: EV ~38%, ICE ~48% retained after ownership period. CO₂ includes manufacturing (EV 10t, ICE 7t) + operational emissions.
+          </div>
+        </div>
+        <div class="card">
+          <div class="chart-tabs" id="chartTabs">
+            <button class="chart-tab active" onclick="switchTab(0,this)">Cumulative TCO</button>
+            <button class="chart-tab" onclick="switchTab(1,this)">Cost breakdown</button>
+            <button class="chart-tab" onclick="switchTab(2,this)">CO₂ lifecycle</button>
+          </div>
+          <div class="chart-legend">
+            <div class="legend-item"><div class="legend-swatch" style="background:var(--ev)"></div><span id="legEv">EV</span></div>
+            <div class="legend-item"><div class="legend-swatch" style="background:var(--ice)"></div><span id="legIce">ICE</span></div>
+          </div>
+          <div class="chart-panel active"><div class="chart-wrap"><canvas id="chart0"></canvas></div></div>
+          <div class="chart-panel"><div class="chart-wrap"><canvas id="chart1"></canvas></div></div>
+          <div class="chart-panel"><div class="chart-wrap"><canvas id="chart2"></canvas></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EMPTY STATE (when no cars selected) -->
+  <div id="emptyState" class="empty-state">
+    <div class="icon">⚡</div>
+    <p>Select an EV and an ICE vehicle above to see the full lifecycle comparison.</p>
+  </div>
+
+</div>
+
+<footer>
+  <p>EV vs ICE Lifecycle Comparator &mdash; Data sourced from manufacturer MSRPs, US Department of Energy, GlobalPetrolPrices.com, Consumer Reports 2024–2025.</p>
+  <p style="margin-top:4px">This tool provides estimates for informational purposes only. Actual costs vary by region, driving habits, incentives and individual vehicle condition.</p>
+</footer>
+
+<script>
+const COUNTRIES=[
+  {n:"World average",e:0.170,f:1.40},{n:"United States",e:0.138,f:1.10},{n:"Canada",e:0.115,f:1.65},
+  {n:"Mexico",e:0.095,f:1.15},{n:"Brazil",e:0.195,f:1.20},{n:"Argentina",e:0.075,f:0.75},
+  {n:"Chile",e:0.165,f:1.45},{n:"Colombia",e:0.170,f:1.55},{n:"United Kingdom",e:0.295,f:1.85},
+  {n:"Germany",e:0.365,f:1.90},{n:"France",e:0.230,f:1.80},{n:"Netherlands",e:0.285,f:2.10},
+  {n:"Norway",e:0.105,f:2.05},{n:"Sweden",e:0.175,f:1.95},{n:"Denmark",e:0.384,f:2.00},
+  {n:"Finland",e:0.195,f:1.90},{n:"Spain",e:0.210,f:1.75},{n:"Italy",e:0.290,f:1.88},
+  {n:"Portugal",e:0.230,f:1.80},{n:"Switzerland",e:0.215,f:1.95},{n:"Austria",e:0.240,f:1.65},
+  {n:"Belgium",e:0.315,f:1.95},{n:"Poland",e:0.185,f:1.55},{n:"Czech Republic",e:0.225,f:1.60},
+  {n:"Hungary",e:0.175,f:1.55},{n:"Romania",e:0.160,f:1.50},{n:"Greece",e:0.225,f:1.90},
+  {n:"Turkey",e:0.105,f:1.80},{n:"Russia",e:0.058,f:0.75},{n:"Ukraine",e:0.065,f:1.15},
+  {n:"South Africa",e:0.140,f:1.50},{n:"Nigeria",e:0.075,f:0.65},{n:"Kenya",e:0.205,f:1.60},
+  {n:"Egypt",e:0.045,f:0.40},{n:"Morocco",e:0.135,f:1.30},{n:"Ethiopia",e:0.055,f:1.35},
+  {n:"UAE",e:0.095,f:0.65},{n:"Saudi Arabia",e:0.050,f:0.35},{n:"Israel",e:0.175,f:1.95},
+  {n:"India",e:0.090,f:1.05},{n:"China",e:0.085,f:1.10},{n:"Japan",e:0.220,f:1.60},
+  {n:"South Korea",e:0.115,f:1.70},{n:"Taiwan",e:0.100,f:1.05},{n:"Vietnam",e:0.085,f:1.00},
+  {n:"Thailand",e:0.120,f:1.35},{n:"Indonesia",e:0.110,f:0.95},{n:"Malaysia",e:0.070,f:0.60},
+  {n:"Philippines",e:0.175,f:1.35},{n:"Singapore",e:0.235,f:2.50},{n:"Australia",e:0.240,f:1.90},
+  {n:"New Zealand",e:0.200,f:2.20},{n:"Pakistan",e:0.110,f:1.00},{n:"Bangladesh",e:0.090,f:1.10},
+];
+
+const REGIONS={
+  "All":null,
+  "N. America":["Tesla","Ford","GM","Rivian","Lucid","Chevrolet","Jeep","Dodge"],
+  "Europe":["BMW","Mercedes","Volkswagen","Audi","Porsche","Volvo","Polestar","Renault","Peugeot","Citroën","SEAT/Cupra","Škoda","Opel/Vauxhall","Fiat","Alfa Romeo","Jaguar","Land Rover"],
+  "Asia":["Toyota","Honda","Hyundai","Kia","Nissan","Mazda","Mitsubishi","Suzuki","Subaru","BYD","NIO","Xpeng","Li Auto","Chery","Geely","MG/SAIC","Tata","Mahindra","Lexus","Genesis"],
+  "Luxury":["BMW","Mercedes","Audi","Porsche","Volvo","Polestar","Lucid","Genesis","Jaguar","Land Rover","Lexus","NIO"],
+  "Budget":["Toyota","Honda","Hyundai","Kia","Volkswagen","Renault","Peugeot","Citroën","MG/SAIC","BYD","Tata","Chery","Geely","Nissan"],
+};
+
+const CARS=[
+  {mfr:"Tesla",seg:"Sedan",model:"Model 3 RWD",ev:true,msrp:40240,kwh:15.0,range:513},
+  {mfr:"Tesla",seg:"Sedan",model:"Model 3 LR AWD",ev:true,msrp:47240,kwh:14.5,range:629},
+  {mfr:"Tesla",seg:"SUV",model:"Model Y RWD",ev:true,msrp:44990,kwh:16.0,range:531},
+  {mfr:"Tesla",seg:"SUV",model:"Model Y LR AWD",ev:true,msrp:52490,kwh:15.5,range:594},
+  {mfr:"Tesla",seg:"Truck",model:"Cybertruck AWD",ev:true,msrp:79990,kwh:22.0,range:547},
+  {mfr:"Tesla",seg:"Luxury",model:"Model S LR",ev:true,msrp:74990,kwh:15.5,range:652},
+  {mfr:"Tesla",seg:"Luxury",model:"Model X LR",ev:true,msrp:84990,kwh:18.5,range:576},
+  {mfr:"Ford",seg:"Truck",model:"F-150 XL",ev:false,msrp:35810,lp100:12.8,co2:292},
+  {mfr:"Ford",seg:"Truck",model:"F-150 Lightning XLT",ev:true,msrp:55974,kwh:24.0,range:386},
+  {mfr:"Ford",seg:"SUV",model:"Mustang Mach-E Select",ev:true,msrp:42995,kwh:18.5,range:434},
+  {mfr:"Ford",seg:"SUV",model:"Explorer XLT",ev:false,msrp:38335,lp100:10.5,co2:240},
+  {mfr:"Ford",seg:"Sedan",model:"Mustang EcoBoost",ev:false,msrp:30920,lp100:9.2,co2:210},
+  {mfr:"GM",seg:"SUV",model:"Bolt EUV",ev:true,msrp:27495,kwh:16.5,range:402},
+  {mfr:"Chevrolet",seg:"SUV",model:"Equinox EV 1LT",ev:true,msrp:35000,kwh:17.0,range:483},
+  {mfr:"Chevrolet",seg:"SUV",model:"Equinox LT",ev:false,msrp:31300,lp100:8.8,co2:201},
+  {mfr:"Chevrolet",seg:"Truck",model:"Silverado LT",ev:false,msrp:39100,lp100:12.5,co2:285},
+  {mfr:"Chevrolet",seg:"Truck",model:"Silverado EV WT",ev:true,msrp:74800,kwh:25.0,range:640},
+  {mfr:"Rivian",seg:"Truck",model:"R1T Adventure",ev:true,msrp:71700,kwh:25.0,range:515},
+  {mfr:"Rivian",seg:"SUV",model:"R1S Adventure",ev:true,msrp:75900,kwh:24.0,range:516},
+  {mfr:"Lucid",seg:"Luxury",model:"Air Pure",ev:true,msrp:69900,kwh:13.5,range:653},
+  {mfr:"Lucid",seg:"Luxury",model:"Air Grand Touring",ev:true,msrp:138000,kwh:14.0,range:830},
+  {mfr:"Jeep",seg:"SUV",model:"Grand Cherokee ICE",ev:false,msrp:40295,lp100:10.2,co2:233},
+  {mfr:"Dodge",seg:"Sedan",model:"Charger Daytona EV",ev:true,msrp:59595,kwh:21.0,range:483},
+  {mfr:"Dodge",seg:"Sedan",model:"Charger V8",ev:false,msrp:37590,lp100:13.1,co2:300},
+  {mfr:"BMW",seg:"Sedan",model:"3 Series 320i",ev:false,msrp:43450,lp100:7.6,co2:174},
+  {mfr:"BMW",seg:"Sedan",model:"5 Series 530i",ev:false,msrp:56400,lp100:8.2,co2:188},
+  {mfr:"BMW",seg:"SUV",model:"X3 xDrive30i",ev:false,msrp:49900,lp100:9.0,co2:206},
+  {mfr:"BMW",seg:"SUV",model:"X5 xDrive40i",ev:false,msrp:71600,lp100:10.5,co2:239},
+  {mfr:"BMW",seg:"Sedan",model:"i4 eDrive40",ev:true,msrp:67300,kwh:16.8,range:590},
+  {mfr:"BMW",seg:"SUV",model:"iX xDrive50",ev:true,msrp:87100,kwh:19.5,range:630},
+  {mfr:"BMW",seg:"Sedan",model:"i5 eDrive40",ev:true,msrp:67800,kwh:17.5,range:582},
+  {mfr:"BMW",seg:"Luxury",model:"7 Series 740i",ev:false,msrp:99700,lp100:9.8,co2:224},
+  {mfr:"BMW",seg:"Luxury",model:"i7 xDrive60",ev:true,msrp:119300,kwh:21.0,range:625},
+  {mfr:"Mercedes",seg:"Sedan",model:"C 200",ev:false,msrp:47450,lp100:7.5,co2:172},
+  {mfr:"Mercedes",seg:"Sedan",model:"E 200",ev:false,msrp:61900,lp100:7.9,co2:180},
+  {mfr:"Mercedes",seg:"SUV",model:"GLC 300",ev:false,msrp:52900,lp100:8.8,co2:201},
+  {mfr:"Mercedes",seg:"Sedan",model:"EQS 450+",ev:true,msrp:104400,kwh:20.0,range:770},
+  {mfr:"Mercedes",seg:"SUV",model:"EQC 400",ev:true,msrp:68490,kwh:20.8,range:412},
+  {mfr:"Mercedes",seg:"SUV",model:"EQB 300",ev:true,msrp:56490,kwh:17.5,range:419},
+  {mfr:"Mercedes",seg:"Luxury",model:"S 500",ev:false,msrp:114900,lp100:9.5,co2:217},
+  {mfr:"Volkswagen",seg:"Sedan",model:"Golf 1.5 TSI",ev:false,msrp:23800,lp100:6.2,co2:141},
+  {mfr:"Volkswagen",seg:"SUV",model:"Tiguan 2.0 TSI",ev:false,msrp:33500,lp100:8.0,co2:183},
+  {mfr:"Volkswagen",seg:"Sedan",model:"Passat 2.0 TDI",ev:false,msrp:38900,lp100:5.8,co2:153},
+  {mfr:"Volkswagen",seg:"Sedan",model:"ID.3 Pro",ev:true,msrp:35000,kwh:15.5,range:426},
+  {mfr:"Volkswagen",seg:"SUV",model:"ID.4 Pro",ev:true,msrp:38990,kwh:18.0,range:520},
+  {mfr:"Volkswagen",seg:"SUV",model:"ID.5 Pro",ev:true,msrp:41990,kwh:17.5,range:532},
+  {mfr:"Volkswagen",seg:"Sedan",model:"ID.7 Pro",ev:true,msrp:55900,kwh:16.5,range:621},
+  {mfr:"Audi",seg:"Sedan",model:"A4 35 TFSI",ev:false,msrp:39900,lp100:7.2,co2:165},
+  {mfr:"Audi",seg:"SUV",model:"Q5 40 TDI",ev:false,msrp:51900,lp100:7.0,co2:184},
+  {mfr:"Audi",seg:"Sedan",model:"e-tron GT",ev:true,msrp:106400,kwh:19.5,range:488},
+  {mfr:"Audi",seg:"SUV",model:"Q4 e-tron 40",ev:true,msrp:48500,kwh:18.5,range:520},
+  {mfr:"Audi",seg:"SUV",model:"Q8 e-tron 55",ev:true,msrp:88900,kwh:22.0,range:582},
+  {mfr:"Porsche",seg:"Luxury",model:"Taycan RWD",ev:true,msrp:91250,kwh:20.5,range:484},
+  {mfr:"Porsche",seg:"Luxury",model:"911 Carrera",ev:false,msrp:115450,lp100:9.8,co2:223},
+  {mfr:"Porsche",seg:"SUV",model:"Cayenne 3.0",ev:false,msrp:84900,lp100:10.2,co2:234},
+  {mfr:"Porsche",seg:"SUV",model:"Macan EV",ev:true,msrp:79900,kwh:19.5,range:516},
+  {mfr:"Volvo",seg:"SUV",model:"XC60 B5",ev:false,msrp:47900,lp100:8.0,co2:183},
+  {mfr:"Volvo",seg:"SUV",model:"XC90 B6",ev:false,msrp:63900,lp100:9.5,co2:217},
+  {mfr:"Volvo",seg:"SUV",model:"EX40 Single",ev:true,msrp:48900,kwh:17.5,range:426},
+  {mfr:"Volvo",seg:"SUV",model:"EX90 Twin Motor",ev:true,msrp:78900,kwh:21.5,range:580},
+  {mfr:"Volvo",seg:"Sedan",model:"ES90 Ultra",ev:true,msrp:78000,kwh:18.0,range:700},
+  {mfr:"Polestar",seg:"Sedan",model:"Polestar 2 LR",ev:true,msrp:54900,kwh:17.0,range:621},
+  {mfr:"Polestar",seg:"SUV",model:"Polestar 3 LR",ev:true,msrp:73900,kwh:21.0,range:560},
+  {mfr:"Renault",seg:"Sedan",model:"Clio 1.0 TCe",ev:false,msrp:17900,lp100:5.5,co2:125},
+  {mfr:"Renault",seg:"SUV",model:"Kadjar 1.3 TCe",ev:false,msrp:28500,lp100:7.0,co2:160},
+  {mfr:"Renault",seg:"Sedan",model:"Megane E-Tech EV40",ev:true,msrp:35200,kwh:15.5,range:300},
+  {mfr:"Renault",seg:"SUV",model:"Scenic E-Tech 170hp",ev:true,msrp:40900,kwh:16.5,range:620},
+  {mfr:"Renault",seg:"Micro",model:"Twingo E-Tech",ev:true,msrp:23900,kwh:12.0,range:249},
+  {mfr:"Peugeot",seg:"Sedan",model:"208 1.2 PureTech",ev:false,msrp:19200,lp100:5.8,co2:133},
+  {mfr:"Peugeot",seg:"SUV",model:"2008 1.2 PureTech",ev:false,msrp:24900,lp100:6.5,co2:148},
+  {mfr:"Peugeot",seg:"Sedan",model:"e-208",ev:true,msrp:33400,kwh:14.5,range:400},
+  {mfr:"Peugeot",seg:"SUV",model:"e-2008",ev:true,msrp:37900,kwh:16.5,range:406},
+  {mfr:"Citroën",seg:"Micro",model:"Ami EV",ev:true,msrp:8490,kwh:8.5,range:75},
+  {mfr:"Citroën",seg:"Sedan",model:"ë-C3",ev:true,msrp:23300,kwh:13.5,range:320},
+  {mfr:"Citroën",seg:"Sedan",model:"C3 1.2 PureTech",ev:false,msrp:16200,lp100:5.6,co2:128},
+  {mfr:"SEAT/Cupra",seg:"Sedan",model:"Cupra Born 58kWh",ev:true,msrp:37995,kwh:15.5,range:423},
+  {mfr:"SEAT/Cupra",seg:"SUV",model:"Cupra Formentor 1.5 TSI",ev:false,msrp:33400,lp100:7.5,co2:171},
+  {mfr:"Škoda",seg:"SUV",model:"Enyaq iV 80",ev:true,msrp:43900,kwh:17.5,range:536},
+  {mfr:"Škoda",seg:"Sedan",model:"Octavia 2.0 TDI",ev:false,msrp:29900,lp100:5.9,co2:155},
+  {mfr:"Opel/Vauxhall",seg:"Sedan",model:"Corsa-e",ev:true,msrp:33450,kwh:14.5,range:359},
+  {mfr:"Opel/Vauxhall",seg:"SUV",model:"Mokka-e",ev:true,msrp:36350,kwh:16.5,range:338},
+  {mfr:"Opel/Vauxhall",seg:"SUV",model:"Crossland 1.2",ev:false,msrp:21900,lp100:6.2,co2:142},
+  {mfr:"Fiat",seg:"Micro",model:"500e",ev:true,msrp:31900,kwh:13.5,range:320},
+  {mfr:"Fiat",seg:"Sedan",model:"500 1.0 Hybrid",ev:false,msrp:16900,lp100:5.5,co2:125},
+  {mfr:"Alfa Romeo",seg:"SUV",model:"Tonale PHEV",ev:false,msrp:49900,lp100:7.5,co2:171},
+  {mfr:"Alfa Romeo",seg:"SUV",model:"Stelvio 2.0 Turbo",ev:false,msrp:54900,lp100:9.5,co2:217},
+  {mfr:"Jaguar",seg:"Luxury",model:"Type 00 GT EV",ev:true,msrp:127000,kwh:22.0,range:750},
+  {mfr:"Land Rover",seg:"SUV",model:"Defender 110 D300",ev:false,msrp:72000,lp100:10.8,co2:247},
+  {mfr:"Land Rover",seg:"SUV",model:"Range Rover Electric",ev:true,msrp:112000,kwh:24.0,range:800},
+  {mfr:"Land Rover",seg:"SUV",model:"Discovery Sport P200",ev:false,msrp:48000,lp100:8.5,co2:194},
+  {mfr:"Toyota",seg:"Sedan",model:"Camry 2.5L",ev:false,msrp:28400,lp100:7.0,co2:160},
+  {mfr:"Toyota",seg:"SUV",model:"RAV4 2.5L",ev:false,msrp:29350,lp100:8.5,co2:194},
+  {mfr:"Toyota",seg:"SUV",model:"Highlander 3.5L",ev:false,msrp:38665,lp100:9.8,co2:225},
+  {mfr:"Toyota",seg:"Sedan",model:"Corolla 1.8L",ev:false,msrp:22050,lp100:6.4,co2:146},
+  {mfr:"Toyota",seg:"SUV",model:"bZ4X XLE",ev:true,msrp:42000,kwh:18.0,range:406},
+  {mfr:"Toyota",seg:"Sedan",model:"bZ3",ev:true,msrp:27700,kwh:13.8,range:450},
+  {mfr:"Honda",seg:"Sedan",model:"Civic 1.5 Turbo",ev:false,msrp:24700,lp100:6.7,co2:153},
+  {mfr:"Honda",seg:"SUV",model:"CR-V 1.5T",ev:false,msrp:30700,lp100:8.2,co2:187},
+  {mfr:"Honda",seg:"SUV",model:"e:Ny1 EV",ev:true,msrp:54900,kwh:16.5,range:412},
+  {mfr:"Honda",seg:"Sedan",model:"e:N1 EV",ev:true,msrp:34900,kwh:16.0,range:510},
+  {mfr:"Hyundai",seg:"Sedan",model:"Elantra 1.6L",ev:false,msrp:21800,lp100:6.8,co2:156},
+  {mfr:"Hyundai",seg:"SUV",model:"Tucson 1.6T",ev:false,msrp:29450,lp100:8.4,co2:192},
+  {mfr:"Hyundai",seg:"Sedan",model:"Ioniq 6 SE RWD",ev:true,msrp:38615,kwh:14.0,range:614},
+  {mfr:"Hyundai",seg:"SUV",model:"Ioniq 5 SE RWD",ev:true,msrp:41450,kwh:18.5,range:488},
+  {mfr:"Hyundai",seg:"SUV",model:"Ioniq 9 AWD",ev:true,msrp:65000,kwh:20.5,range:620},
+  {mfr:"Kia",seg:"Sedan",model:"Cerato 2.0L",ev:false,msrp:23490,lp100:7.0,co2:160},
+  {mfr:"Kia",seg:"SUV",model:"Sportage 1.6T",ev:false,msrp:29590,lp100:8.5,co2:194},
+  {mfr:"Kia",seg:"SUV",model:"EV6 Standard",ev:true,msrp:42600,kwh:17.5,range:394},
+  {mfr:"Kia",seg:"SUV",model:"EV9 GT-Line",ev:true,msrp:65900,kwh:21.5,range:541},
+  {mfr:"Kia",seg:"Sedan",model:"EV3 Standard",ev:true,msrp:30900,kwh:13.5,range:501},
+  {mfr:"Nissan",seg:"Sedan",model:"Sentra 2.0L",ev:false,msrp:21130,lp100:7.2,co2:165},
+  {mfr:"Nissan",seg:"SUV",model:"Rogue 1.5T",ev:false,msrp:29780,lp100:8.3,co2:190},
+  {mfr:"Nissan",seg:"Sedan",model:"LEAF 40kWh",ev:true,msrp:28900,kwh:16.5,range:270},
+  {mfr:"Nissan",seg:"SUV",model:"Ariya e-4ORCE 87kWh",ev:true,msrp:55900,kwh:19.5,range:530},
+  {mfr:"Mazda",seg:"Sedan",model:"Mazda3 2.5L",ev:false,msrp:25370,lp100:7.8,co2:178},
+  {mfr:"Mazda",seg:"SUV",model:"CX-5 2.5L AWD",ev:false,msrp:33100,lp100:9.0,co2:206},
+  {mfr:"Mazda",seg:"SUV",model:"MX-30 EV",ev:true,msrp:37000,kwh:18.0,range:200},
+  {mfr:"Subaru",seg:"SUV",model:"Forester 2.5L",ev:false,msrp:29295,lp100:8.9,co2:204},
+  {mfr:"Subaru",seg:"SUV",model:"Solterra EV",ev:true,msrp:44995,kwh:18.0,range:406},
+  {mfr:"Mitsubishi",seg:"SUV",model:"Outlander 2.5L",ev:false,msrp:30495,lp100:9.5,co2:217},
+  {mfr:"Suzuki",seg:"Sedan",model:"Swift 1.2L",ev:false,msrp:16500,lp100:5.4,co2:123},
+  {mfr:"Suzuki",seg:"SUV",model:"Vitara 1.4 Boosterjet",ev:false,msrp:25900,lp100:6.5,co2:148},
+  {mfr:"Lexus",seg:"Luxury",model:"IS 300",ev:false,msrp:40600,lp100:9.4,co2:215},
+  {mfr:"Lexus",seg:"Luxury",model:"RZ 450e EV",ev:true,msrp:55750,kwh:18.5,range:440},
+  {mfr:"Lexus",seg:"Luxury",model:"LX 600",ev:false,msrp:95000,lp100:13.5,co2:309},
+  {mfr:"Genesis",seg:"Luxury",model:"G80 2.5T",ev:false,msrp:52350,lp100:9.0,co2:206},
+  {mfr:"Genesis",seg:"Luxury",model:"Electrified G80",ev:true,msrp:80920,kwh:19.5,range:427},
+  {mfr:"Genesis",seg:"SUV",model:"GV70 Electrified",ev:true,msrp:67890,kwh:19.0,range:442},
+  {mfr:"BYD",seg:"Sedan",model:"Seal 82kWh RWD",ev:true,msrp:31500,kwh:15.5,range:700},
+  {mfr:"BYD",seg:"SUV",model:"Atto 3",ev:true,msrp:37900,kwh:16.5,range:480},
+  {mfr:"BYD",seg:"Sedan",model:"Han EV",ev:true,msrp:39900,kwh:16.0,range:605},
+  {mfr:"BYD",seg:"Sedan",model:"Dolphin",ev:true,msrp:22900,kwh:13.5,range:427},
+  {mfr:"BYD",seg:"Sedan",model:"Seagull",ev:true,msrp:11000,kwh:11.5,range:405},
+  {mfr:"BYD",seg:"SUV",model:"Song Plus DM",ev:false,msrp:21000,lp100:4.8,co2:110},
+  {mfr:"NIO",seg:"Sedan",model:"ET5 75kWh",ev:true,msrp:45800,kwh:16.0,range:556},
+  {mfr:"NIO",seg:"SUV",model:"ES6",ev:true,msrp:55600,kwh:19.5,range:579},
+  {mfr:"NIO",seg:"Luxury",model:"ET7 100kWh",ev:true,msrp:69200,kwh:17.0,range:675},
+  {mfr:"Xpeng",seg:"Sedan",model:"P7i 76kWh",ev:true,msrp:36700,kwh:15.5,range:688},
+  {mfr:"Xpeng",seg:"SUV",model:"G9 98kWh AWD",ev:true,msrp:53500,kwh:21.0,range:570},
+  {mfr:"Li Auto",seg:"SUV",model:"Li ONE EREV",ev:false,msrp:45800,lp100:5.6,co2:128},
+  {mfr:"Li Auto",seg:"SUV",model:"Li L9 EREV",ev:false,msrp:58900,lp100:5.4,co2:123},
+  {mfr:"Chery",seg:"SUV",model:"Tiggo 8 Pro 1.6T",ev:false,msrp:19900,lp100:8.0,co2:183},
+  {mfr:"Chery",seg:"SUV",model:"Omoda 5 EV",ev:true,msrp:23900,kwh:16.5,range:430},
+  {mfr:"Geely",seg:"Sedan",model:"Emgrand 1.5L",ev:false,msrp:12500,lp100:6.5,co2:149},
+  {mfr:"Geely",seg:"SUV",model:"Atlas Pro 2.0T",ev:false,msrp:21500,lp100:9.0,co2:206},
+  {mfr:"Geely",seg:"Sedan",model:"Galaxy E8 EV",ev:true,msrp:29900,kwh:14.5,range:700},
+  {mfr:"MG/SAIC",seg:"Sedan",model:"MG 5 EV Standard",ev:true,msrp:26990,kwh:15.5,range:320},
+  {mfr:"MG/SAIC",seg:"SUV",model:"MG ZS EV Long Range",ev:true,msrp:34990,kwh:17.0,range:440},
+  {mfr:"MG/SAIC",seg:"SUV",model:"MG ZS 1.5L",ev:false,msrp:19990,lp100:7.2,co2:165},
+  {mfr:"MG/SAIC",seg:"Sedan",model:"MG4 EV 64kWh",ev:true,msrp:33490,kwh:15.0,range:450},
+  {mfr:"Tata",seg:"SUV",model:"Nexon EV Max",ev:true,msrp:21000,kwh:16.5,range:437},
+  {mfr:"Tata",seg:"SUV",model:"Punch EV",ev:true,msrp:14000,kwh:13.5,range:421},
+  {mfr:"Tata",seg:"SUV",model:"Nexon 1.2T",ev:false,msrp:12500,lp100:6.8,co2:156},
+  {mfr:"Mahindra",seg:"SUV",model:"BE 6 EV",ev:true,msrp:21000,kwh:17.5,range:557},
+  {mfr:"Mahindra",seg:"SUV",model:"XEV 9e EV",ev:true,msrp:30000,kwh:19.5,range:656},
+  {mfr:"Mahindra",seg:"SUV",model:"Scorpio N 2.0T",ev:false,msrp:18500,lp100:10.5,co2:241},
+];
+
+const EV_M=0.061, ICE_M=0.101, ICE_CO2L=2.31, GRID_CO2=0.380, MFG_EV=10000, MFG_ICE=7000;
+let selReg="All", evCar=null, iceCar=null, charts={};
+
+function fmt(v){return '$'+Math.round(v).toLocaleString();}
+
+function setupCountries(){
+  const s=document.getElementById('countrySelect');
+  COUNTRIES.forEach((c,i)=>{const o=document.createElement('option');o.value=i;o.textContent=c.n;s.appendChild(o);});
+}
+
+function onCountry(){
+  const c=COUNTRIES[+document.getElementById('countrySelect').value];
+  document.getElementById('elecS').value=c.e;
+  document.getElementById('fuelS').value=c.f;
+  syncSliders(); recalc();
+}
+
+function syncSliders(){
+  document.getElementById('elecV').textContent='$'+parseFloat(document.getElementById('elecS').value).toFixed(2)+' /kWh';
+  document.getElementById('fuelV').textContent='$'+parseFloat(document.getElementById('fuelS').value).toFixed(2)+' /L';
+  document.getElementById('distV').textContent=parseInt(document.getElementById('distS').value).toLocaleString()+' km';
+  document.getElementById('yearsV').textContent=document.getElementById('yearsS').value+' years';
+}
+function onSlider(){syncSliders();recalc();}
+
+function setupRegionPills(){
+  const c=document.getElementById('regionPills');
+  Object.keys(REGIONS).forEach(r=>{
+    const b=document.createElement('button');
+    b.className='pill'+(r==='All'?' active':'');
+    b.textContent=r; b.type='button';
+    b.onclick=()=>{
+      selReg=r;
+      document.querySelectorAll('.pill').forEach(x=>x.className='pill');
+      b.className='pill active';
+      populateBrands('ev'); populateBrands('ice');
+    };
+    c.appendChild(b);
+  });
+}
+
+function filteredCars(type){
+  const isEv=(type==='ev');
+  let cars=CARS.filter(c=>c.ev===isEv);
+  if(selReg!=='All'){const a=REGIONS[selReg]; cars=cars.filter(c=>a.includes(c.mfr));}
+  return cars;
+}
+
+function populateBrands(type){
+  const cars=filteredCars(type);
+  const brands=[...new Set(cars.map(c=>c.mfr))].sort();
+  const bSel=document.getElementById(type+'Brand');
+  const cur=bSel.value;
+  bSel.innerHTML='<option value="">— Brand —</option>';
+  brands.forEach(b=>{const o=document.createElement('option');o.value=b;o.textContent=b;if(b===cur)o.selected=true;bSel.appendChild(o);});
+  populateModels(type);
+}
+
+function populateModels(type){
+  const brand=document.getElementById(type+'Brand').value;
+  const isEv=(type==='ev');
+  let cars=CARS.filter(c=>c.ev===isEv&&c.mfr===brand);
+  const segs=[...new Set(cars.map(c=>c.seg))].sort();
+  const segSel=document.getElementById(type+'Seg');
+  const curSeg=segSel.value;
+  segSel.innerHTML='<option value="">— Segment —</option>';
+  segs.forEach(s=>{const o=document.createElement('option');o.value=s;o.textContent=s;if(s===curSeg)o.selected=true;segSel.appendChild(o);});
+  const seg=segSel.value;
+  if(seg) cars=cars.filter(c=>c.seg===seg);
+  const mSel=document.getElementById(type+'Model');
+  const curM=mSel.value;
+  mSel.innerHTML='<option value="">— Model —</option>';
+  cars.forEach(m=>{const o=document.createElement('option');o.value=m.model;o.textContent=m.model;if(m.model===curM)o.selected=true;mSel.appendChild(o);});
+  onModelChange(type);
+}
+
+function onModelChange(type){
+  const brand=document.getElementById(type+'Brand').value;
+  const model=document.getElementById(type+'Model').value;
+  const car=CARS.find(c=>c.mfr===brand&&c.model===model);
+  const info=document.getElementById(type+'Info');
+  const panel=document.getElementById(type+'Picker');
+  if(type==='ev'){
+    evCar=car||null;
+    panel.className='picker'+(car?' ev-selected':'');
+    if(car){
+      info.innerHTML=`<div class="car-name">${car.mfr} ${car.model} <span class="type-tag ev">EV</span></div>
+      <div class="car-stats">
+        <span class="car-stat"><strong>${car.kwh} kWh</strong>/100km</span>
+        <span class="car-stat"><strong>${car.range} km</strong> range</span>
+        <span class="car-stat">MSRP <strong>${fmt(car.msrp)}</strong></span>
+      </div>`;
+    } else { info.innerHTML='<div style="color:var(--text3);font-size:12px;">Select a brand and model above</div>'; }
+  } else {
+    iceCar=car||null;
+    panel.className='picker'+(car?' ice-selected':'');
+    if(car){
+      info.innerHTML=`<div class="car-name">${car.mfr} ${car.model} <span class="type-tag ice">ICE</span></div>
+      <div class="car-stats">
+        <span class="car-stat"><strong>${car.lp100}L</strong>/100km</span>
+        <span class="car-stat"><strong>${car.co2}g</strong> CO₂/km</span>
+        <span class="car-stat">MSRP <strong>${fmt(car.msrp)}</strong></span>
+      </div>`;
+    } else { info.innerHTML='<div style="color:var(--text3);font-size:12px;">Select a brand and model above</div>'; }
+  }
+  recalc();
+}
+
+function calcTCO(car,elec,fuel,km,years){
+  let fuelCost=0, co2=0;
+  if(car.ev){fuelCost=car.kwh/100*km*elec*years; co2=car.kwh/100*km*GRID_CO2*years;}
+  else{fuelCost=car.lp100/100*km*fuel*years; co2=car.lp100/100*km*ICE_CO2L*years;}
+  const maint=(car.ev?EV_M:ICE_M)*km*years;
+  const ins=car.msrp*0.022*years*(car.ev?1.25:1);
+  const resid=car.msrp*(car.ev?0.38:0.48);
+  return{msrp:car.msrp,fuelCost,maint,ins,resid,tco:car.msrp+fuelCost+maint+ins-resid,co2};
+}
+
+function setDiff(id,val){
+  const el=document.getElementById(id);
+  el.textContent=(val>=0?'+':'')+fmt(val);
+  el.className=val>500?'diff-pos':val<-500?'diff-neg':'diff-neu';
+}
+
+function recalc(){
+  const empty=document.getElementById('emptyState');
+  const results=document.getElementById('resultsSection');
+  if(!evCar||!iceCar){results.style.display='none';empty.style.display='block';return;}
+  results.style.display='block'; empty.style.display='none';
+
+  const elec=parseFloat(document.getElementById('elecS').value);
+  const fuel=parseFloat(document.getElementById('fuelS').value);
+  const km=parseInt(document.getElementById('distS').value);
+  const years=parseInt(document.getElementById('yearsS').value);
+  const ev=calcTCO(evCar,elec,fuel,km,years);
+  const ice=calcTCO(iceCar,elec,fuel,km,years);
+  const savings=ice.tco-ev.tco;
+  const premium=evCar.msrp-iceCar.msrp;
+  const annSave=((ice.fuelCost+ice.maint+ice.ins)-(ev.fuelCost+ev.maint+ev.ins))/years;
+  const be=annSave>0?premium/annSave:Infinity;
+
+  document.getElementById('mEvTco').textContent=fmt(ev.tco);
+  document.getElementById('mIceTco').textContent=fmt(ice.tco);
+  document.getElementById('mEvPy').textContent=fmt(ev.tco/years)+' /year';
+  document.getElementById('mIcePy').textContent=fmt(ice.tco/years)+' /year';
+  document.getElementById('mBe').textContent=be===Infinity||be<0?'N/A':(be<1?'< 1 yr':Math.round(be*10)/10+' yrs');
+  const saveEl=document.getElementById('mSave');
+  saveEl.textContent=(savings>=0?'+':'')+fmt(savings);
+  saveEl.className='mval'+(savings>=0?' ev':' ice');
+
+  const wb=document.getElementById('winnerBanner');
+  if(ev.tco<ice.tco){
+    wb.className='winner-banner ev';
+    wb.innerHTML=`<span>EV wins — ${evCar.mfr} ${evCar.model} costs less over ${years} years</span><span class="savings-pill">Save ${fmt(savings)}</span>`;
+  } else if(ice.tco<ev.tco){
+    wb.className='winner-banner ice';
+    wb.innerHTML=`<span>ICE wins — ${iceCar.mfr} ${iceCar.model} costs less over ${years} years</span><span class="savings-pill">Save ${fmt(-savings)}</span>`;
+  } else {
+    wb.className='winner-banner tie';
+    wb.innerHTML='<span>Essentially a tie over the ownership period</span>';
+  }
+
+  const S=(a,b,i)=>{document.getElementById('r'+i+'a').textContent=a; document.getElementById('r'+i+'b').textContent=b;};
+  S(fmt(ev.msrp),fmt(ice.msrp),1); setDiff('r1d',ev.msrp-ice.msrp);
+  S(fmt(ev.fuelCost),fmt(ice.fuelCost),2); setDiff('r2d',ev.fuelCost-ice.fuelCost);
+  S(fmt(ev.maint),fmt(ice.maint),3); setDiff('r3d',ev.maint-ice.maint);
+  S(fmt(ev.ins),fmt(ice.ins),4); setDiff('r4d',ev.ins-ice.ins);
+  S('-'+fmt(ev.resid),'-'+fmt(ice.resid),5); setDiff('r5d',-ev.resid-(-ice.resid));
+  S(fmt(ev.tco),fmt(ice.tco),6); setDiff('r6d',ev.tco-ice.tco);
+
+  document.getElementById('legEv').textContent=evCar.model;
+  document.getElementById('legIce').textContent=iceCar.model;
+
+  drawCharts(ev,ice,elec,fuel,km,years);
+}
+
+function drawCharts(ev,ice,elec,fuel,km,years){
+  ['c0','c1','c2'].forEach(k=>{if(charts[k]){charts[k].destroy();}});
+  const labels=Array.from({length:years},(_,i)=>'Yr '+(i+1));
+  const evAnn=(ev.fuelCost+ev.maint+ev.ins)/years;
+  const iceAnn=(ice.fuelCost+ice.maint+ice.ins)/years;
+  const evCum=[],iceCum=[];
+  let ec=evCar.msrp, ic=iceCar.msrp;
+  for(let i=1;i<=years;i++){
+    ec+=evAnn; ic+=iceAnn;
+    evCum.push(Math.round(ec-evCar.msrp*0.38*(1-i/years*0.6)));
+    iceCum.push(Math.round(ic-iceCar.msrp*0.48*(1-i/years*0.6)));
+  }
+  const cOpts={responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#4e5e72',callback:v=>'$'+Math.round(v/1000)+'k'}},x:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#4e5e72',maxTicksLimit:8}}}};
+  charts.c0=new Chart(document.getElementById('chart0'),{type:'line',data:{labels,datasets:[
+    {label:'EV',data:evCum,borderColor:'#00e5a0',backgroundColor:'rgba(0,229,160,0.06)',fill:true,tension:0.35,pointRadius:2,borderWidth:2},
+    {label:'ICE',data:iceCum,borderColor:'#ff6b35',backgroundColor:'rgba(255,107,53,0.06)',fill:true,tension:0.35,pointRadius:2,borderWidth:2}
+  ]},options:{...cOpts}});
+
+  charts.c1=new Chart(document.getElementById('chart1'),{type:'bar',data:{labels:['Purchase','Energy','Maintenance','Insurance'],datasets:[
+    {label:'EV',data:[ev.msrp,ev.fuelCost,ev.maint,ev.ins],backgroundColor:'rgba(0,229,160,0.65)',borderRadius:4},
+    {label:'ICE',data:[ice.msrp,ice.fuelCost,ice.maint,ice.ins],backgroundColor:'rgba(255,107,53,0.65)',borderRadius:4}
+  ]},options:{...cOpts,scales:{y:{...cOpts.scales.y},x:{...cOpts.scales.x,ticks:{...cOpts.scales.x.ticks,maxTicksLimit:10}}}}});
+
+  const evCo2Series=[],iceCo2Series=[];
+  const evCo2Ann=ev.co2/years, iceCo2Ann=ice.co2/years;
+  let eco=MFG_EV, ico=MFG_ICE;
+  for(let i=0;i<years;i++){eco+=evCo2Ann;ico+=iceCo2Ann;evCo2Series.push(Math.round(eco));iceCo2Series.push(Math.round(ico));}
+  const co2Opts={...cOpts,scales:{y:{...cOpts.scales.y,ticks:{color:'#4e5e72',callback:v=>Math.round(v/1000)+'t'}},x:{...cOpts.scales.x}}};
+  charts.c2=new Chart(document.getElementById('chart2'),{type:'line',data:{labels,datasets:[
+    {label:'EV',data:evCo2Series,borderColor:'#00e5a0',backgroundColor:'rgba(0,229,160,0.06)',fill:true,tension:0.35,pointRadius:2,borderWidth:2},
+    {label:'ICE',data:iceCo2Series,borderColor:'#ff6b35',backgroundColor:'rgba(255,107,53,0.06)',fill:true,tension:0.35,pointRadius:2,borderWidth:2}
+  ]},options:co2Opts});
+}
+
+let activeTab=0;
+function switchTab(n,btn){
+  activeTab=n;
+  document.querySelectorAll('.chart-tab').forEach((b,i)=>b.className='chart-tab'+(i===n?' active':''));
+  document.querySelectorAll('.chart-panel').forEach((p,i)=>p.className='chart-panel'+(i===n?' active':''));
+  if(evCar&&iceCar){
+    const elec=parseFloat(document.getElementById('elecS').value);
+    const fuel=parseFloat(document.getElementById('fuelS').value);
+    const km=parseInt(document.getElementById('distS').value);
+    const years=parseInt(document.getElementById('yearsS').value);
+    drawCharts(calcTCO(evCar,elec,fuel,km,years),calcTCO(iceCar,elec,fuel,km,years),elec,fuel,km,years);
+  }
+}
+
+setupCountries(); syncSliders(); setupRegionPills();
+populateBrands('ev'); populateBrands('ice');
+</script>
+</body>
+</html>
